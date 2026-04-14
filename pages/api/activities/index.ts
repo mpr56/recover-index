@@ -1,0 +1,19 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]';
+import { addActivity } from '@/lib/store';
+import { todayStr } from '@/lib/dateUtils';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.method !== 'POST') return res.status(405).end();
+  const { date, category, subType, intensity, durationMins, timeOfDay, label } = req.body;
+  if (!category || !subType || !intensity || !durationMins || !timeOfDay)
+    return res.status(400).json({ error: 'category, subType, intensity, durationMins, timeOfDay required' });
+  const record = addActivity(session.user.id, date ?? todayStr(), {
+    category, subType, intensity, durationMins, timeOfDay,
+    label: label || subType,
+  });
+  return res.status(201).json(record);
+}

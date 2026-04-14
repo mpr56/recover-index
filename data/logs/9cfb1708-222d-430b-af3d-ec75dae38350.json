@@ -1,0 +1,38 @@
+[
+  {
+    "id": "c48377fa-9ede-4ec0-b8bd-f61350355e10",
+    "userId": "9cfb1708-222d-430b-af3d-ec75dae38350",
+    "date": "2026-04-14",
+    "sleep": {
+      "hours": 2,
+      "quality": "okay"
+    },
+    "activities": [],
+    "notes": "",
+    "createdAt": "2026-04-14T05:50:16.092Z",
+    "updatedAt": "2026-04-14T05:52:33.614Z"
+  },
+  {
+    "id": "3824f95a-359b-430d-84f7-688b5a3dcaf6",
+    "userId": "9cfb1708-222d-430b-af3d-ec75dae38350",
+    "date": "2026-04-13",
+    "sleep": {
+      "hours": 8.5,
+      "quality": "great"
+    },
+    "activities": [
+      {
+        "category": "hobby",
+        "subType": "martial_arts",
+        "intensity": "hard",
+        "durationMins": 180,
+        "timeOfDay": "15:50",
+        "label": "martial_arts",
+        "id": "0dd05be7-b7ba-4143-a8b6-1f3249e52e98"
+      }
+    ],
+    "notes": "",
+    "createdAt": "2026-04-14T05:51:42.233Z",
+    "updatedAt": "2026-04-14T05:52:13.105Z"
+  }
+]
