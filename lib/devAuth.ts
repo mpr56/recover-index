@@ -6,6 +6,7 @@ export function getDevSession() {
       id: 'dev-user',
       name: 'Dev User',
       email: 'dev@test.com',
+      image: 'https://www.pngall.com/wp-content/uploads/14/Y2k-Star-PNG-Picture.png',
     },
   };
 }
