@@ -1,0 +1,15 @@
+[
+  {
+    "id": "9a4687c2-f064-4987-b89d-cfe500870f4f",
+    "userId": "dev-user",
+    "date": "2026-04-15",
+    "sleep": {
+      "hours": 7.5,
+      "quality": "okay"
+    },
+    "activities": [],
+    "notes": "",
+    "createdAt": "2026-04-15T11:54:22.820Z",
+    "updatedAt": "2026-04-15T11:54:22.821Z"
+  }
+]

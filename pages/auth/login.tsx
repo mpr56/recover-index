@@ -23,10 +23,10 @@ export default function Login() {
 
   return (
     <>
-      <Head><title>Sign In — RecoveryIndex</title></Head>
+      <Head><title>Sign in to Rejuvenate</title></Head>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ position: 'fixed', inset: 0 }}>
-        <Silk speed={3.5} scale={1.0} color="#0f1a2e" noiseIntensity={3.8} rotation={0.8} />
+        <Silk speed={3.5} scale={1.0} color="#0f1a2e" noiseIntensity={1.75} rotation={0.8} />
       </div>
 
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', position: 'relative', zIndex: 10 }}>
@@ -36,7 +36,7 @@ export default function Login() {
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, color: '#fff' }}>R</div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em' }}>RecoveryIndex</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em' }}>Rejuvenate</span>
           </div>
 
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', marginBottom: 8 }}>Welcome back</h1>

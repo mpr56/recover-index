@@ -1,6 +1,5 @@
 import React from 'react';
 
-// ─── Style objects ────────────────────────────────────────────────────────────
 export const sharedStyles = {
   label: {
     fontSize: 10, fontWeight: 700,
@@ -48,7 +47,6 @@ export const sharedStyles = {
   }),
 };
 
-// ─── Section ──────────────────────────────────────────────────────────────────
 export function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
@@ -58,7 +56,6 @@ export function Section({ label, children }: { label: string; children: React.Re
   );
 }
 
-// ─── Chip ─────────────────────────────────────────────────────────────────────
 export function Chip({ children, onRemove }: { children: React.ReactNode; onRemove?: () => void }) {
   return (
     <div style={{

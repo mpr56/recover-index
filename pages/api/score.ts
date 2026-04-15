@@ -1,12 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth/[...nextauth]';
+import { getDevSession } from '@/lib/devAuth';
 import { getRecordByDate, getRecordsInRange } from '@/lib/store';
 import { calculateRecovery, } from '@/lib/algorithm';
 import { getDateStr, todayStr } from '@/lib/dateUtils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions);
+  const session =
+  getDevSession() ??
+  (await getServerSession(req, res, authOptions));
   if (!session) return res.status(401).json({ error: 'Unauthorized' });
   const date   = (req.query.date as string) || todayStr();
   const record = getRecordByDate(session.user.id, date);

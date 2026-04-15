@@ -1,444 +1,158 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 
-import GlassSurface from '@/components/GlassSurface';
-import ScoreArc      from '@/components/ScoreArc';
-import WeekChart     from '@/components/WeekChart';
-import ProfileMenu   from '@/components/ProfileMenu';
+// ── Layout & shell components ──────────────────────────────────────────────
+import DashboardHeader   from '@/components/DashboardHeader';
+import EmptyState        from '@/components/EmptyState';
+import ScoreCard         from '@/components/ScoreCard';
+import SleepCard         from '@/components/SleepCard';
+import ActivitiesSection from '@/components/ActivitiesSection';
+import StatsGrid         from '@/components/StatsGrid';
+import TrendSection      from '@/components/TrendSection';
+import FooterLinks       from '@/components/FooterLinks';
+import BottomBar         from '@/components/BottomBar';
+import HowItWorksModal   from '@/components/HowItWorksModal';
+
+// ── Sheet overlays ─────────────────────────────────────────────────────────
 import SleepSheet    from '@/components/SleepSheet';
 import ActivitySheet from '@/components/ActivitySheet';
 import HistorySheet  from '@/components/HistorySheet';
-import { Chip }      from '@/components/ui';
 
-import {
-  STATUS_CONFIG,
-  getSubTypeIcon, getSubTypeLabel,
-  type RecoveryResult,
-  type WeekDay,
-  type DayRecord,
-  type SleepEntry,
-  type Activity,
-} from '@/lib/types';
-import { todayStr, fmtDate, firstName } from '@/lib/dateUtils';
-import { activityWeightedLoad } from '@/lib/algorithm';
-import { dashboardStyles as s } from '@/components/Dashboard.styles';
+// ── Shared styles & hook ───────────────────────────────────────────────────
+import { shared, GLOBAL_CSS } from '@/components/shared.styles';
+import { useDashboard } from '@/hooks/useDashboard';
+import { STATUS_CONFIG } from '@/lib/types';
 
 const Silk = dynamic(() => import('@/components/Silk'), { ssr: false });
 
-// ─── Global styles injected once ─────────────────────────────────────────────
-const GLOBAL_STYLES = `
-  @keyframes spin { to { transform: rotate(360deg); } }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
-  input[type=range] { appearance: none; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); outline: none; }
-  input[type=range]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #6366f1; cursor: pointer; box-shadow: 0 0 6px rgba(99,102,241,0.5); }
-  input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.2); }
-`;
-
-// ─── Activity icon helper ─────────────────────────────────────────────────────
-
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────────────────
 export default function Home() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const db = useDashboard();
 
-  const [record,    setRecord]    = useState<DayRecord | null>(null);
-  const [result,    setResult]    = useState<RecoveryResult | null>(null);
-  const [week,      setWeek]      = useState<WeekDay[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [sleepOpen, setSleepOpen] = useState(false);
-  const [actOpen,   setActOpen]   = useState(false);
-  const [histOpen,  setHistOpen]  = useState(false);
-  const [howOpen,   setHowOpen]   = useState(false);
-  const [editActivity, setEditActivity] = useState<Activity | null>(null);
-  const [editDate,     setEditDate]     = useState<string | null>(null);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') router.push('/auth/login');
-  }, [status, router]);
-
-  // ── Data loading ────────────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const [weekRes, logsRes] = await Promise.all([
-      fetch('/api/week'),
-      fetch('/api/logs'),
-    ]);
-    if (weekRes.status === 401) { router.push('/auth/login'); return; }
-
-    const weekData: WeekDay[]   = await weekRes.json();
-    const logs:     DayRecord[] = await logsRes.json();
-    setWeek(weekData);
-
-    const today = logs.find(l => l.date === todayStr()) ?? null;
-    setRecord(today);
-
-    if (today && (today.sleep || today.activities.length > 0)) {
-      const sr = await fetch(`/api/score?date=${todayStr()}`);
-      if (sr.ok) setResult(await sr.json());
-      else       setResult(null);
-    } else {
-      setResult(null);
-    }
-    setLoading(false);
-  }, [router]);
-
-  useEffect(() => {
-    if (status === 'authenticated') loadData();
-  }, [status, loadData]);
-
-  // ── Save handlers ────────────────────────────────────────────────────────────
-  const handleSaveSleep = async (entry: SleepEntry, date: string) => {
-    await fetch('/api/sleep', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, ...entry }),
-    });
-    setSleepOpen(false);
-    await loadData();
-  };
-
-  const handleRemoveActivity = async (activityId: string) => {
-    await fetch(`/api/activities/${activityId}?date=${todayStr()}`, { method: 'DELETE' });
-    await loadData();
-  };
-
-  const handleEditActivity = (act: Activity) => {
-    setEditActivity(act);
-    setEditDate(todayStr());
-    setActOpen(true);
-  };
-
-  const handleSaveActivity = async (activity: Omit<Activity, 'id'>, date: string) => {
-    if (editActivity) {
-      // Update existing
-      await fetch(`/api/activities/${editActivity.id}?date=${date}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, ...activity }),
-      });
-      setEditActivity(null);
-      setEditDate(null);
-    } else {
-      // Add new
-      await fetch('/api/activities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, ...activity }),
-      });
-    }
-    setActOpen(false);
-    await loadData();
-  };
-
-  // ── Loading / auth gates ─────────────────────────────────────────────────────
-  if (status === 'loading' || status === 'unauthenticated') {
+  if (db.status === 'loading' || db.status === 'unauthenticated') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#080b12' }}>
-        <div style={s.spinner} />
+        <div style={shared.spinner} />
       </div>
     );
   }
 
-  const cfg       = result ? STATUS_CONFIG[result.status] : null;
-  const silkColor = cfg ? cfg.silkColor : '#0f1a2e';
-  const hasSleep  = !!record?.sleep;
-  const hasActs   = (record?.activities?.length ?? 0) > 0;
-  const hasAny    = hasSleep || hasActs;
+  const silkColor = db.result ? STATUS_CONFIG[db.result.status].silkColor : '#0f1a2e';
 
   return (
     <>
       <Head>
-        <title>RecoveryIndex</title>
+        <title>Rejuvenate</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
-      <style>{GLOBAL_STYLES}</style>
+      <style>{GLOBAL_CSS}</style>
 
-      {/* Silk background */}
-      <div style={s.silkLayer}>
-        <Silk speed={3.2} scale={0.95} color={silkColor} noiseIntensity={4.2} rotation={0.6} />
+      <div style={shared.silkLayer}>
+        <Silk speed={3.2} scale={0.95} color={silkColor} noiseIntensity={1.75} rotation={0.6} />
       </div>
 
-      <div style={s.page}>
-        <div style={s.inner}>
+      <div style={shared.page}>
+        <div style={shared.inner}>
 
-          {/* Header */}
-          <header style={s.header}>
-            <div>
-              <p style={s.headerGreeting}>Welcome back,</p>
-              <p style={s.headerName}>{firstName(session?.user?.name)} 👋</p>
-            </div>
-            <ProfileMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} />
-          </header>
+          <DashboardHeader
+            name={db.session?.user?.name}
+            email={db.session?.user?.email}
+            image={db.session?.user?.image}
+          />
 
-          {/* Content */}
-          <main style={s.main}>
-            {loading ? (
-              <div style={s.loader}>
-                <div style={s.spinner} />
-                <p style={s.loaderText}>Loading your data...</p>
+          <main style={{ paddingBottom: 96, display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* ── Loading ── */}
+            {db.loading && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 100 }}>
+                <div style={shared.spinner} />
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>Loading your data...</p>
               </div>
+            )}
 
-            ) : !hasAny ? (
-              /* ── Empty state ── */
-              <div style={s.emptyState}>
-                <GlassSurface width="150px" height="150px" borderRadius={28} backgroundOpacity={0.07} blur={12}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 48 }}>💤</span>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Nothing logged</span>
-                </GlassSurface>
-                <p style={s.emptyTitle}>Start logging today</p>
-                <p style={s.emptySubtitle}>Add your sleep and activities to calculate your recovery score.</p>
-                <div style={s.emptyActions}>
-                  <button onClick={() => setSleepOpen(true)} style={s.emptyBtn(true)}>😴 Log Sleep</button>
-                  <button onClick={() => setActOpen(true)}   style={s.emptyBtn(false)}>🏋️ Add Activity</button>
-                </div>
-              </div>
+            {/* ── Empty state ── */}
+            {!db.loading && !db.hasAny && (
+              <EmptyState
+                onLogSleep={() => db.setSleepOpen(true)}
+                onAddActivity={() => db.openActivitySheet()}
+              />
+            )}
 
-            ) : (
+            {/* ── Dashboard cards ── */}
+            {!db.loading && db.hasAny && (
               <>
-                {/* ── Score card (when calculated) ── */}
-                {result && cfg && (
-                  <GlassSurface borderRadius={24} backgroundOpacity={0.08} blur={16} style={s.scoreCard}>
-                    <p style={s.scoreDateLabel}>{fmtDate(todayStr())}</p>
-                    <ScoreArc score={result.score} status={result.status} />
-                    <p style={{ ...s.scoreRecommendation, marginTop: 10 }}>{result.recommendation}</p>
-
-                    <div style={s.chipRow}>
-                      {hasSleep && (
-                        <Chip onRemove={undefined}>
-                          😴 {record?.sleep?.hours}h · {record?.sleep?.quality}
-                        </Chip>
-                      )}
-                    </div>
-                  </GlassSurface>
+                {db.result && (
+                  <ScoreCard result={db.result} sleep={db.record?.sleep ?? null} />
                 )}
 
-                {/* ── Sleep card (always shown when logged) ── */}
-                {hasSleep && (
-                  <GlassSurface borderRadius={20} backgroundOpacity={0.07} blur={14} style={s.statCard}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <p style={s.statLabel}>Sleep</p>
-                        <p style={s.statValue}>{record?.sleep?.hours}h</p>
-                        <p style={s.statSub}>
-                          {record?.sleep?.quality}
-                          {record?.sleep?.bedtime  && ` · 🛏 ${record.sleep.bedtime}`}
-                          {record?.sleep?.wakeTime && ` → ${record.sleep.wakeTime}`}
-                        </p>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                        <span style={{ fontSize: 28 }}>
-                          {record?.sleep?.quality === 'great' ? '😊' : record?.sleep?.quality === 'okay' ? '😐' : '😴'}
-                        </span>
-                        <button onClick={() => setSleepOpen(true)}
-                          style={{ fontSize: 11, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                    {result && (
-                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-                          Sleep score: <span style={{ color: '#fff', fontWeight: 700 }}>{result.sleepComponent}</span>
-                        </p>
-                      </div>
-                    )}
-                  </GlassSurface>
+                {db.hasSleep && db.record?.sleep && (
+                  <SleepCard
+                    sleep={db.record.sleep}
+                    result={db.result}
+                    onEdit={() => db.setSleepOpen(true)}
+                  />
                 )}
 
-                {/* ── Activities section ── */}
-                <GlassSurface borderRadius={20} backgroundOpacity={0.07} blur={14} style={{ padding: '16px 18px' }}>
-                  <div style={s.activitiesHeader}>
-                    <p style={s.sectionLabel}>Activities today</p>
-                    <button onClick={() => setActOpen(true)} style={s.addActivityBtn}>+ Add</button>
-                  </div>
+                <ActivitiesSection
+                  activities={db.record?.activities ?? []}
+                  result={db.result}
+                  onAdd={() => db.openActivitySheet()}
+                  onEdit={db.handleEditActivity}
+                  onRemove={db.handleRemoveActivity}
+                />
 
-                  {!hasActs ? (
-                    <p style={s.emptyActivities}>No activities logged yet</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {[...(record?.activities ?? [])].sort((a, b) => a.timeOfDay.localeCompare(b.timeOfDay)).map(act => {
-                        const icon = getSubTypeIcon(act.subType);
-                        const load = Math.round(activityWeightedLoad(act));
-                        const typeLabel = getSubTypeLabel(act.subType);
-                        return (
-                          <div key={act.id} style={s.activityItem}>
-                            <div style={s.activityLeft}>
-                              <div style={s.activityIcon}>{icon}</div>
-                              <div>
-                                <p style={s.activityName}>{typeLabel}</p>
-                                <p style={s.activityMeta}>
-                                  {act.intensity} · {act.durationMins}min · 🕐 {act.timeOfDay}
-                                </p>
-                              </div>
-                            </div>
-                            <div style={s.activityRight}>
-                              <span style={s.activityLoad}>{load} pts</span>
-                              <button
-                                onClick={() => handleEditActivity(act)}
-                                style={{ ...s.removeBtn, color: '#818cf8', fontSize: 11, fontWeight: 600, padding: '2px 6px' }}
-                              >✎</button>
-                              <button onClick={() => handleRemoveActivity(act.id)} style={s.removeBtn}>×</button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {result && hasActs && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between' }}>
-                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Total load today</p>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: '#818cf8' }}>{result.todayLoad} pts</p>
-                    </div>
-                  )}
-                </GlassSurface>
-
-                {/* ── Stats + Tomorrow projection ── */}
-                {result && cfg && (
-                  <>
-                    <div style={s.statsGrid}>
-                      <GlassSurface borderRadius={20} backgroundOpacity={0.07} blur={14} style={s.statCard}>
-                        <p style={s.statLabel}>Fatigue Debt</p>
-                        <p style={s.statValue}>{result.fatigueDebt}</p>
-                        <p style={s.statSub}>accumulated load</p>
-                      </GlassSurface>
-                      <GlassSurface borderRadius={20} backgroundOpacity={0.07} blur={14}
-                        style={{ ...s.statCard, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <p style={s.statLabel}>Tomorrow</p>
-                        <p style={{ ...s.statValue, color: STATUS_CONFIG[result.tomorrowProjection >= 70 ? 'good' : result.tomorrowProjection >= 50 ? 'moderate' : 'poor'].hex }}>
-                          {result.tomorrowProjection}
-                        </p>
-                        <p style={s.statSub}>projected score</p>
-                      </GlassSurface>
-                    </div>
-
-                    {/* ── Training advice ── */}
-                    <GlassSurface borderRadius={20} backgroundOpacity={0.07} blur={14} style={s.adviceCard}>
-                      <p style={s.statLabel}>Training Advice</p>
-                      <p style={s.adviceText}>{result.trainingAdvice}</p>
-                    </GlassSurface>
-                  </>
+                {db.result && (
+                  <StatsGrid result={db.result} />
                 )}
 
-                {/* ── 7-day trend ── */}
-                {week.some(d => d.score != null) && (
-                  <GlassSurface borderRadius={20} backgroundOpacity={0.07} blur={14} style={s.trendCard}>
-                    <div style={s.trendHeader}>
-                      <p style={s.statLabel}>7-Day Trend</p>
-                      <button onClick={() => setHistOpen(true)} style={s.trendViewAll}>View all →</button>
-                    </div>
-                    <WeekChart week={week} />
-                  </GlassSurface>
+                {db.week.some(d => d.score != null) && (
+                  <TrendSection
+                    week={db.week}
+                    onViewAll={() => db.setHistOpen(true)}
+                  />
                 )}
 
-                {hasAny && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingBottom: 8 }}>
-                    <button onClick={() => setSleepOpen(true)} style={s.editLogLink}>
-                      Edit sleep
-                    </button>
-                    <a
-                      href="#"
-                      onClick={e => { e.preventDefault(); setHowOpen(true); }}
-                      style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'inherit', cursor: 'pointer' }}
-                    >
-                      How does the recovery score work?
-                    </a>
-                  </div>
-                )}
+                <FooterLinks
+                  onEditSleep={() => db.setSleepOpen(true)}
+                  onHowItWorks={() => db.setHowOpen(true)}
+                />
               </>
             )}
           </main>
         </div>
 
-        {/* Bottom action bar */}
-        <div style={s.bottomBar}>
-          <button onClick={() => setSleepOpen(true)}
-            style={{ ...s.bottomBarBtn(hasSleep), borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-            {hasSleep ? '😴 Sleep ✓' : '😴 Log Sleep'}
-          </button>
-          <button onClick={() => setActOpen(true)}
-            style={{ ...s.bottomBarBtn(true), borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-            + Activity
-          </button>
-          <button onClick={() => setHistOpen(true)} style={s.bottomBarBtn(false)}>
-            History
-          </button>
-        </div>
+        <BottomBar
+          hasSleep={db.hasSleep}
+          onSleep={() => db.setSleepOpen(true)}
+          onActivity={() => db.openActivitySheet()}
+          onHistory={() => db.setHistOpen(true)}
+        />
       </div>
 
-      {/* Sheets */}
+      {/* ── Overlays & sheets ── */}
       <SleepSheet
-        open={sleepOpen}
-        onClose={() => setSleepOpen(false)}
-        onSave={handleSaveSleep}
-        existing={record?.sleep ?? null}
-        onHowItWorks={() => { setSleepOpen(false); setHowOpen(true); }}
+        open={db.sleepOpen}
+        onClose={() => db.setSleepOpen(false)}
+        onSave={db.handleSaveSleep}
+        existing={db.record?.sleep ?? null}
+        onHowItWorks={() => { db.setSleepOpen(false); db.setHowOpen(true); }}
       />
       <ActivitySheet
-        open={actOpen}
-        onClose={() => { setActOpen(false); setEditActivity(null); setEditDate(null); }}
-        onSave={handleSaveActivity}
-        editActivity={editActivity}
-        editDate={editDate}
+        open={db.actOpen}
+        onClose={db.closeActivitySheet}
+        onSave={db.handleSaveActivity}
+        editActivity={db.editActivity}
+        editDate={db.editDate}
       />
       <HistorySheet
-        open={histOpen}
-        onClose={() => setHistOpen(false)}
-        week={week}
+        open={db.histOpen}
+        onClose={() => db.setHistOpen(false)}
+        week={db.week}
       />
-
-      {/* ── How it works modal ── */}
-      {howOpen && (
-        <div
-          onClick={() => setHowOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 12px' }}
-        >
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480 }}>
-            <GlassSurface borderRadius={24} backgroundOpacity={0.12} blur={24}
-              style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: '24px 24px 48px', maxHeight: '75vh', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 9, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff' }}>R</div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>RecoveryIndex</p>
-              </div>
-              <p style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: 6, marginTop: 12 }}>How the score works</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24, lineHeight: 1.5 }}>
-                Your recovery score (0–100) is calculated each day from three components.
-              </p>
-
-              {([
-                { emoji: '😴', title: 'Sleep  ·  50%', desc: 'Duration and quality of your last sleep. 8h of great sleep scores highest. Both hours and quality rating are factored in.' },
-                { emoji: '🏋️', title: 'Fatigue Debt  ·  35%', desc: 'Accumulated load from recent training, weighted by recency. A hard session 2 days ago still counts — your body hasn\'t fully recovered yet.' },
-                { emoji: '⏰', title: 'Time of Day  ·  15%', desc: 'Activities later in the day carry a higher fatigue multiplier. An evening workout leaves less recovery time before sleep than a morning session.' },
-              ] as { emoji: string; title: string; desc: string }[]).map(({ emoji, title, desc }) => (
-                <div key={title} style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{emoji} {title}</p>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{desc}</p>
-                </div>
-              ))}
-
-              <div style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 14, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', marginBottom: 6 }}>📈 Tomorrow Projection</p>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
-                  Estimates your score 24h from now assuming average sleep tonight. Use it to decide whether to train hard, go easy, or rest.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setHowOpen(false)}
-                style={{ width: '100%', padding: 13, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                Got it
-              </button>
-            </GlassSurface>
-          </div>
-        </div>
-      )}
+      <HowItWorksModal
+        open={db.howOpen}
+        onClose={() => db.setHowOpen(false)}
+      />
     </>
   );
 }
