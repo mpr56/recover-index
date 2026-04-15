@@ -8,16 +8,44 @@ import {
 import { getLast7Days, fmtDay, fmtDateShort, todayStr } from '@/lib/dateUtils';
 import { useActivityForm } from './useActivityForm';
 import { activitySheetStyles as s } from './ActivitySheet.styles';
+import { useRef, useEffect } from 'react';
 
 interface Props {
-  open:    boolean;
-  onClose: () => void;
-  onSave:  (activity: Omit<Activity, 'id'>, date: string) => Promise<void>;
+  open:        boolean;
+  onClose:     () => void;
+  onSave:      (activity: Omit<Activity, 'id'>, date: string) => Promise<void>;
+  editActivity?: Activity | null;
+  editDate?:    string | null;
 }
 
-export default function ActivitySheet({ open, onClose, onSave }: Props) {
-  const form = useActivityForm();
-  const days = getLast7Days();
+export default function ActivitySheet({ open, onClose, onSave, editActivity, editDate }: Props) {
+  const form    = useActivityForm(editActivity ?? null);
+  const days    = getLast7Days();
+  const rowRef  = useRef<HTMLDivElement>(null);
+
+  // Scroll date row to today (last item) when opened
+  useEffect(() => {
+    if (open && rowRef.current) {
+      rowRef.current.scrollLeft = rowRef.current.scrollWidth;
+    }
+  }, [open]);
+
+  // Populate form when editing an existing activity
+  useEffect(() => {
+    if (open && editActivity) {
+      form.handleCategoryChange(editActivity.category);
+      form.setSubType(editActivity.subType);
+      form.setIntensity(editActivity.intensity);
+      form.setDurationMins(editActivity.durationMins);
+      form.setTimeOfDay(editActivity.timeOfDay);
+      if (editDate) form.setDate(editDate);
+    } else if (!open) {
+      form.reset();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editActivity]);
+
+  const isEdit = !!editActivity;
 
   const save = async () => {
     form.setSaving(true);
@@ -47,12 +75,12 @@ export default function ActivitySheet({ open, onClose, onSave }: Props) {
           >
             <div style={shared.sheetHandle}><div style={shared.sheetHandleBar} /></div>
 
-            <p style={s.title}>Log Activity</p>
-            <p style={s.subtitle}>Select a day, then fill in the details</p>
+            <p style={s.title}>{isEdit ? 'Edit Activity' : 'Log Activity'}</p>
+            <p style={s.subtitle}>{isEdit ? 'Update the details below' : 'Select a day, then fill in the details'}</p>
 
             {/* ── Date picker ── */}
             <Section label="Day">
-              <div style={s.dateRow}>
+              <div ref={rowRef} style={s.dateRow}>
                 {days.map(d => {
                   const isToday = d === todayStr();
                   const label   = isToday ? 'Today' : fmtDay(d);
@@ -151,7 +179,12 @@ export default function ActivitySheet({ open, onClose, onSave }: Props) {
               <p style={s.loadValue}>{form.preview.weightedLoad} pts</p>
             </div>
 
-            <SheetActions onCancel={onClose} onSave={save} saving={form.saving} saveLabel="Add Activity" />
+            <SheetActions
+              onCancel={onClose}
+              onSave={save}
+              saving={form.saving}
+              saveLabel={isEdit ? 'Update Activity' : 'Add Activity'}
+            />
           </GlassSurface>
         </div>
       </div>

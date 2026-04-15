@@ -3,15 +3,14 @@ import type { ActivityCategory, ActivitySubType, ActivityIntensity, Activity } f
 import { getSubTypeOptions } from '@/lib/types';
 import { activityWeightedLoad, activityBaseLoad, timeOfDayMultiplier } from '@/lib/algorithm';
 import { nowTimeStr, todayStr } from '@/lib/dateUtils';
-import { v4 as uuidv4 } from 'uuid';
 
-export function useActivityForm() {
+export function useActivityForm(initial: Activity | null = null) {
   const [date,         setDate]         = useState(todayStr());
-  const [category,     setCategory]     = useState<ActivityCategory>('gym');
-  const [subType,      setSubType]      = useState<ActivitySubType>('push');
-  const [intensity,    setIntensity]    = useState<ActivityIntensity>('moderate');
-  const [durationMins, setDurationMins] = useState(60);
-  const [timeOfDay,    setTimeOfDay]    = useState(nowTimeStr());
+  const [category,     setCategory]     = useState<ActivityCategory>(initial?.category ?? 'gym');
+  const [subType,      setSubType]      = useState<ActivitySubType>(initial?.subType ?? 'push');
+  const [intensity,    setIntensity]    = useState<ActivityIntensity>(initial?.intensity ?? 'moderate');
+  const [durationMins, setDurationMins] = useState(initial?.durationMins ?? 60);
+  const [timeOfDay,    setTimeOfDay]    = useState(initial?.timeOfDay ?? nowTimeStr());
   const [saving,       setSaving]       = useState(false);
 
   // When category changes, auto-select the first sub-type in that category

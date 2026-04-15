@@ -53,6 +53,8 @@ export default function Home() {
   const [sleepOpen, setSleepOpen] = useState(false);
   const [actOpen,   setActOpen]   = useState(false);
   const [histOpen,  setHistOpen]  = useState(false);
+  const [editActivity, setEditActivity] = useState<Activity | null>(null);
+  const [editDate,     setEditDate]     = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login');
@@ -99,18 +101,36 @@ export default function Home() {
     await loadData();
   };
 
-  const handleAddActivity = async (activity: Omit<Activity, 'id'>, date: string) => {
-    await fetch('/api/activities', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, ...activity }),
-    });
-    setActOpen(false);
+  const handleRemoveActivity = async (activityId: string) => {
+    await fetch(`/api/activities/${activityId}?date=${todayStr()}`, { method: 'DELETE' });
     await loadData();
   };
 
-  const handleRemoveActivity = async (activityId: string) => {
-    await fetch(`/api/activities/${activityId}?date=${todayStr()}`, { method: 'DELETE' });
+  const handleEditActivity = (act: Activity) => {
+    setEditActivity(act);
+    setEditDate(todayStr());
+    setActOpen(true);
+  };
+
+  const handleSaveActivity = async (activity: Omit<Activity, 'id'>, date: string) => {
+    if (editActivity) {
+      // Update existing
+      await fetch(`/api/activities/${editActivity.id}?date=${date}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, ...activity }),
+      });
+      setEditActivity(null);
+      setEditDate(null);
+    } else {
+      // Add new
+      await fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, ...activity }),
+      });
+    }
+    setActOpen(false);
     await loadData();
   };
 
@@ -258,6 +278,10 @@ export default function Home() {
                             </div>
                             <div style={s.activityRight}>
                               <span style={s.activityLoad}>{load} pts</span>
+                              <button
+                                onClick={() => handleEditActivity(act)}
+                                style={{ ...s.removeBtn, color: '#818cf8', fontSize: 11, fontWeight: 600, padding: '2px 6px' }}
+                              >✎</button>
                               <button onClick={() => handleRemoveActivity(act.id)} style={s.removeBtn}>×</button>
                             </div>
                           </div>
@@ -313,9 +337,18 @@ export default function Home() {
                 )}
 
                 {hasAny && (
-                  <button onClick={() => setSleepOpen(true)} style={s.editLogLink}>
-                    Edit sleep
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, paddingBottom: 8 }}>
+                    <button onClick={() => setSleepOpen(true)} style={s.editLogLink}>
+                      Edit sleep
+                    </button>
+                    <a
+                      href="#"
+                      onClick={e => e.preventDefault()}
+                      style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'inherit', cursor: 'pointer' }}
+                    >
+                      How does the recovery score work?
+                    </a>
+                  </div>
                 )}
               </>
             )}
@@ -347,8 +380,10 @@ export default function Home() {
       />
       <ActivitySheet
         open={actOpen}
-        onClose={() => setActOpen(false)}
-        onSave={handleAddActivity}
+        onClose={() => { setActOpen(false); setEditActivity(null); setEditDate(null); }}
+        onSave={handleSaveActivity}
+        editActivity={editActivity}
+        editDate={editDate}
       />
       <HistorySheet
         open={histOpen}

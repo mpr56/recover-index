@@ -4,6 +4,7 @@ import type { SleepEntry, SleepQuality } from '@/lib/types';
 import { getLast7Days, fmtDay, fmtDateShort, fmtDate, todayStr } from '@/lib/dateUtils';
 import { useSleepForm } from './useSleepForm';
 import { sleepSheetStyles as s } from './SleepSheet.styles';
+import { useRef, useEffect } from 'react';
 
 interface Props {
   open:     boolean;
@@ -18,7 +19,6 @@ const QUALITY_OPTIONS: { value: SleepQuality; emoji: string; label: string }[] =
   { value: 'great', emoji: '😊', label: 'Great' },
 ];
 
-// Reuse the same dateChip style from ActivitySheet
 const dateChip = (active: boolean): React.CSSProperties => ({
   flexShrink: 0, padding: '7px 12px', borderRadius: 20,
   border: 'none', cursor: 'pointer', fontFamily: 'inherit',
@@ -34,8 +34,16 @@ const dateRow: React.CSSProperties = {
 };
 
 export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
-  const form = useSleepForm({ existing, open });
-  const days = getLast7Days();
+  const form    = useSleepForm({ existing, open });
+  const days    = getLast7Days();
+  const rowRef  = useRef<HTMLDivElement>(null);
+
+  // Scroll the date row so "today" (last item) is visible on open
+  useEffect(() => {
+    if (open && rowRef.current) {
+      rowRef.current.scrollLeft = rowRef.current.scrollWidth;
+    }
+  }, [open]);
 
   const save = async () => {
     form.setSaving(true);
@@ -62,7 +70,7 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
 
             {/* ── Date picker ── */}
             <Section label="Which night?">
-              <div style={dateRow}>
+              <div ref={rowRef} style={dateRow}>
                 {days.map(d => {
                   const isToday = d === todayStr();
                   return (
@@ -82,7 +90,7 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
                 display={`${form.hours}h`}
                 min={2} max={12} step={0.5}
                 minLabel="2h" maxLabel="12h"
-                onChange={form.setHours}
+                onChange={v => { form.setHours(v); form.setManualHours(true); }}
               />
             </Section>
 
@@ -98,23 +106,25 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
               </div>
             </Section>
 
-            {/* ── Optional times ── */}
+            {/* ── Optional times — stack vertically on mobile ── */}
             <Section label="Times (optional)">
               <div style={s.optionalRow}>
                 <div style={s.timeField}>
                   <span style={s.timeLabel}>Bedtime</span>
                   <input type="time" value={form.bedtime}
-                    onChange={e => form.setBedtime(e.target.value)} style={s.timeInput} />
+                    onChange={e => { form.setBedtime(e.target.value); form.setManualHours(false); }}
+                    style={s.timeInput} />
                 </div>
                 <div style={s.timeField}>
                   <span style={s.timeLabel}>Wake time</span>
                   <input type="time" value={form.wakeTime}
-                    onChange={e => form.setWakeTime(e.target.value)} style={s.timeInput} />
+                    onChange={e => { form.setWakeTime(e.target.value); form.setManualHours(false); }}
+                    style={s.timeInput} />
                 </div>
               </div>
               {form.bedtime && form.wakeTime && (
                 <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>
-                  ↳ Auto-computed {form.hours}h from your times
+                  ↳ Computed {form.hours}h from bedtime → wake time
                 </p>
               )}
             </Section>
@@ -125,6 +135,17 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
               saving={form.saving}
               saveLabel={existing ? 'Update Sleep' : 'Save Sleep'}
             />
+
+            {/* ── How does this work ── */}
+            <p style={{ textAlign: 'center', marginTop: 18 }}>
+              <a
+                href="#"
+                onClick={e => e.preventDefault()}
+                style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'inherit', cursor: 'pointer' }}
+              >
+                How does the sleep score work?
+              </a>
+            </p>
           </GlassSurface>
         </div>
       </div>

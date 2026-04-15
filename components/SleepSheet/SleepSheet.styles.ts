@@ -16,7 +16,8 @@ export const sleepSheetStyles = {
   } satisfies React.CSSProperties,
 
   optionalRow: {
-    display: 'flex',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
     gap: 12,
     marginTop: 12,
   } satisfies React.CSSProperties,

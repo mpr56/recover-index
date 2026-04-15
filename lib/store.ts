@@ -64,6 +64,18 @@ export function addActivity(userId: string, date: string, activity: Omit<Activit
   return records[idx];
 }
 
+export function updateActivity(userId: string, date: string, activityId: string, updates: Omit<Activity, 'id'>): DayRecord | null {
+  const { records, record, idx } = ensureRecord(userId, date);
+  const aIdx = record.activities.findIndex(a => a.id === activityId);
+  if (aIdx === -1) return null;
+  const updated = { ...record.activities[aIdx], ...updates };
+  const activities = [...record.activities];
+  activities[aIdx] = updated;
+  records[idx] = { ...record, activities, updatedAt: new Date().toISOString() };
+  write(userId, records);
+  return records[idx];
+}
+
 export function removeActivity(userId: string, date: string, activityId: string): DayRecord | null {
   const { records, record, idx } = ensureRecord(userId, date);
   records[idx] = { ...record, activities: record.activities.filter(a => a.id !== activityId), updatedAt: new Date().toISOString() };
