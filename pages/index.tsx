@@ -53,6 +53,7 @@ export default function Home() {
   const [sleepOpen, setSleepOpen] = useState(false);
   const [actOpen,   setActOpen]   = useState(false);
   const [histOpen,  setHistOpen]  = useState(false);
+  const [howOpen,   setHowOpen]   = useState(false);
   const [editActivity, setEditActivity] = useState<Activity | null>(null);
   const [editDate,     setEditDate]     = useState<string | null>(null);
 
@@ -171,7 +172,7 @@ export default function Home() {
               <p style={s.headerGreeting}>Welcome back,</p>
               <p style={s.headerName}>{firstName(session?.user?.name)} 👋</p>
             </div>
-            <ProfileMenu name={session?.user?.name} email={session?.user?.email} />
+            <ProfileMenu name={session?.user?.name} email={session?.user?.email} image={session?.user?.image} />
           </header>
 
           {/* Content */}
@@ -261,7 +262,7 @@ export default function Home() {
                     <p style={s.emptyActivities}>No activities logged yet</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {record?.activities.map(act => {
+                      {[...(record?.activities ?? [])].sort((a, b) => a.timeOfDay.localeCompare(b.timeOfDay)).map(act => {
                         const icon = getSubTypeIcon(act.subType);
                         const load = Math.round(activityWeightedLoad(act));
                         const typeLabel = getSubTypeLabel(act.subType);
@@ -343,7 +344,7 @@ export default function Home() {
                     </button>
                     <a
                       href="#"
-                      onClick={e => e.preventDefault()}
+                      onClick={e => { e.preventDefault(); setHowOpen(true); }}
                       style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'inherit', cursor: 'pointer' }}
                     >
                       How does the recovery score work?
@@ -377,6 +378,7 @@ export default function Home() {
         onClose={() => setSleepOpen(false)}
         onSave={handleSaveSleep}
         existing={record?.sleep ?? null}
+        onHowItWorks={() => { setSleepOpen(false); setHowOpen(true); }}
       />
       <ActivitySheet
         open={actOpen}
@@ -390,6 +392,53 @@ export default function Home() {
         onClose={() => setHistOpen(false)}
         week={week}
       />
+
+      {/* ── How it works modal ── */}
+      {howOpen && (
+        <div
+          onClick={() => setHowOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 60, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 12px' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480 }}>
+            <GlassSurface borderRadius={24} backgroundOpacity={0.12} blur={24}
+              style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: '24px 24px 48px', maxHeight: '75vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 9, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff' }}>R</div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>RecoveryIndex</p>
+              </div>
+              <p style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginBottom: 6, marginTop: 12 }}>How the score works</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24, lineHeight: 1.5 }}>
+                Your recovery score (0–100) is calculated each day from three components.
+              </p>
+
+              {([
+                { emoji: '😴', title: 'Sleep  ·  50%', desc: 'Duration and quality of your last sleep. 8h of great sleep scores highest. Both hours and quality rating are factored in.' },
+                { emoji: '🏋️', title: 'Fatigue Debt  ·  35%', desc: 'Accumulated load from recent training, weighted by recency. A hard session 2 days ago still counts — your body hasn\'t fully recovered yet.' },
+                { emoji: '⏰', title: 'Time of Day  ·  15%', desc: 'Activities later in the day carry a higher fatigue multiplier. An evening workout leaves less recovery time before sleep than a morning session.' },
+              ] as { emoji: string; title: string; desc: string }[]).map(({ emoji, title, desc }) => (
+                <div key={title} style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{emoji} {title}</p>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{desc}</p>
+                </div>
+              ))}
+
+              <div style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 14, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', marginBottom: 6 }}>📈 Tomorrow Projection</p>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+                  Estimates your score 24h from now assuming average sleep tonight. Use it to decide whether to train hard, go easy, or rest.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setHowOpen(false)}
+                style={{ width: '100%', padding: 13, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Got it
+              </button>
+            </GlassSurface>
+          </div>
+        </div>
+      )}
     </>
   );
 }

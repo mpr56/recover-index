@@ -7,10 +7,11 @@ import { sleepSheetStyles as s } from './SleepSheet.styles';
 import { useRef, useEffect } from 'react';
 
 interface Props {
-  open:     boolean;
-  onClose:  () => void;
-  onSave:   (entry: SleepEntry, date: string) => Promise<void>;
-  existing: SleepEntry | null;
+  open:           boolean;
+  onClose:        () => void;
+  onSave:         (entry: SleepEntry, date: string) => Promise<void>;
+  existing:       SleepEntry | null;
+  onHowItWorks?:  () => void;
 }
 
 const QUALITY_OPTIONS: { value: SleepQuality; emoji: string; label: string }[] = [
@@ -33,7 +34,7 @@ const dateRow: React.CSSProperties = {
   scrollbarWidth: 'none',
 };
 
-export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
+export default function SleepSheet({ open, onClose, onSave, existing, onHowItWorks }: Props) {
   const form    = useSleepForm({ existing, open });
   const days    = getLast7Days();
   const rowRef  = useRef<HTMLDivElement>(null);
@@ -90,7 +91,7 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
                 display={`${form.hours}h`}
                 min={2} max={12} step={0.5}
                 minLabel="2h" maxLabel="12h"
-                onChange={v => { form.setHours(v); form.setManualHours(true); }}
+                onChange={v => form.setHours(v)}
               />
             </Section>
 
@@ -112,13 +113,13 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
                 <div style={s.timeField}>
                   <span style={s.timeLabel}>Bedtime</span>
                   <input type="time" value={form.bedtime}
-                    onChange={e => { form.setBedtime(e.target.value); form.setManualHours(false); }}
+                    onChange={e => form.setBedtime(e.target.value)}
                     style={s.timeInput} />
                 </div>
                 <div style={s.timeField}>
                   <span style={s.timeLabel}>Wake time</span>
                   <input type="time" value={form.wakeTime}
-                    onChange={e => { form.setWakeTime(e.target.value); form.setManualHours(false); }}
+                    onChange={e => form.setWakeTime(e.target.value)}
                     style={s.timeInput} />
                 </div>
               </div>
@@ -140,7 +141,7 @@ export default function SleepSheet({ open, onClose, onSave, existing }: Props) {
             <p style={{ textAlign: 'center', marginTop: 18 }}>
               <a
                 href="#"
-                onClick={e => e.preventDefault()}
+                onClick={e => { e.preventDefault(); onHowItWorks?.(); }}
                 style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'inherit', cursor: 'pointer' }}
               >
                 How does the sleep score work?

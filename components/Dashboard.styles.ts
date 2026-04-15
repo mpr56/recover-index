@@ -323,6 +323,9 @@ export const dashboardStyles = {
     bottom: 0, left: 0, right: 0,
     zIndex: 30,
     display: 'flex',
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+    WebkitBackfaceVisibility: 'hidden' as const,
   } satisfies React.CSSProperties,
 
   bottomBarBtn: (accent?: boolean): React.CSSProperties => ({

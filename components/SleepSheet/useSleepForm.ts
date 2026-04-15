@@ -1,45 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { SleepEntry, SleepQuality } from '@/lib/types';
 import { todayStr } from '@/lib/dateUtils';
 
 interface Props { existing: SleepEntry | null; open: boolean; }
 
-export function useSleepForm({ existing, open }: Props) {
-  const [date,        setDate]        = useState(todayStr());
-  const [hours,       setHours]       = useState(7.5);
-  const [quality,     setQuality]     = useState<SleepQuality>('okay');
-  const [bedtime,     setBedtime]     = useState('');
-  const [wakeTime,    setWakeTime]    = useState('');
-  const [saving,      setSaving]      = useState(false);
-  // When true, user has dragged the slider manually — don't auto-override from times
-  const [manualHours, setManualHours] = useState(false);
+function computeHours(bedtime: string, wakeTime: string): number | null {
+  if (!bedtime || !wakeTime) return null;
+  const [bh, bm] = bedtime.split(':').map(Number);
+  const [wh, wm] = wakeTime.split(':').map(Number);
+  let mins = (wh * 60 + wm) - (bh * 60 + bm);
+  if (mins < 0) mins += 24 * 60;
+  const h = Math.round((mins / 60) * 2) / 2;
+  return h > 0 && h <= 12 ? h : null;
+}
 
-  // Reset form whenever the sheet opens or existing data changes
+export function useSleepForm({ existing, open }: Props) {
+  const [date,     setDate]     = useState(todayStr());
+  const [hours,    setHours]    = useState(7.5);
+  const [quality,  setQuality]  = useState<SleepQuality>('okay');
+  const [bedtime,  setBedtimeRaw]  = useState('');
+  const [wakeTime, setWakeTimeRaw] = useState('');
+  const [saving,   setSaving]   = useState(false);
+
+  // Track whether the slider was moved manually after times were set
+  const manualOverride = useRef(false);
+
+  // Reset whenever sheet opens or existing changes
   useEffect(() => {
+    manualOverride.current = false;
     if (existing) {
       setHours(existing.hours);
       setQuality(existing.quality);
-      setBedtime(existing.bedtime  ?? '');
-      setWakeTime(existing.wakeTime ?? '');
-      setManualHours(false);
+      setBedtimeRaw(existing.bedtime  ?? '');
+      setWakeTimeRaw(existing.wakeTime ?? '');
     } else {
-      setHours(7.5); setQuality('okay'); setBedtime(''); setWakeTime('');
-      setManualHours(false);
+      setHours(7.5); setQuality('okay');
+      setBedtimeRaw(''); setWakeTimeRaw('');
     }
   }, [existing, open]);
 
-  // Auto-compute hours from bedtime + wakeTime whenever either changes,
-  // unless the user has overridden via the slider
-  useEffect(() => {
-    if (manualHours) return;
-    if (!bedtime || !wakeTime) return;
-    const [bh, bm] = bedtime.split(':').map(Number);
-    const [wh, wm] = wakeTime.split(':').map(Number);
-    let sleepMins  = (wh * 60 + wm) - (bh * 60 + bm);
-    if (sleepMins < 0) sleepMins += 24 * 60;
-    const computed = Math.round((sleepMins / 60) * 2) / 2;
-    if (computed > 0 && computed <= 12) setHours(computed);
-  }, [bedtime, wakeTime, manualHours]);
+  // Wrap setters so changing times always recomputes hours immediately
+  const setBedtime = (v: string) => {
+    manualOverride.current = false;
+    setBedtimeRaw(v);
+    // Compute against current wakeTime
+    setWakeTimeRaw(prev => {
+      const computed = computeHours(v, prev);
+      if (computed !== null) setHours(computed);
+      return prev;
+    });
+  };
+
+  const setWakeTime = (v: string) => {
+    manualOverride.current = false;
+    setWakeTimeRaw(v);
+    // Compute against current bedtime
+    setBedtimeRaw(prev => {
+      const computed = computeHours(prev, v);
+      if (computed !== null) setHours(computed);
+      return prev;
+    });
+  };
+
+  const setHoursManual = (v: number) => {
+    manualOverride.current = true;
+    setHours(v);
+  };
 
   const buildPayload = (): SleepEntry => ({
     hours, quality,
@@ -49,12 +75,11 @@ export function useSleepForm({ existing, open }: Props) {
 
   return {
     date, setDate,
-    hours, setHours,
+    hours, setHours: setHoursManual,
     quality, setQuality,
     bedtime, setBedtime,
     wakeTime, setWakeTime,
     saving, setSaving,
-    manualHours, setManualHours,
     buildPayload,
   };
 }
