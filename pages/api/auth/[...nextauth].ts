@@ -9,15 +9,15 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, account }) {
-      // On first sign-in via Google, persist the stable sub as userId
-      if (account) {
+    async jwt({ token }) {
+      // sub is always set by Google — use it directly as userId
+      if (!token.userId) {
         token.userId = token.sub ?? token.email ?? '';
       }
       return token;
     },
     async session({ session, token }) {
-      if (token.userId) session.user.id = token.userId as string;
+      session.user.id = token.userId as string;
       return session;
     },
   },
