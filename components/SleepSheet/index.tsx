@@ -1,7 +1,8 @@
 import GlassSurface from '@/components/GlassSurface';
 import { Section, SliderField, SheetActions, sharedStyles as shared } from '@/components/ui';
 import type { SleepEntry, SleepQuality } from '@/lib/types';
-import { getLast7Days, fmtDay, fmtDateShort, fmtDate, todayStr } from '@/lib/dateUtils';
+import { fmtDay, fmtDateShort, fmtDate } from '@/lib/dateUtils';
+import { useTimezone } from '@/lib/timezoneContext';
 import { useSleepForm } from './useSleepForm';
 import { sleepSheetStyles as s } from './SleepSheet.styles';
 import { useRef, useEffect } from 'react';
@@ -35,8 +36,9 @@ const dateRow: React.CSSProperties = {
 };
 
 export default function SleepSheet({ open, onClose, onSave, existing, onHowItWorks }: Props) {
-  const form    = useSleepForm({ existing, open });
-  const days    = getLast7Days();
+  const { todayStr, last7Days } = useTimezone();
+  const form    = useSleepForm({ existing, open, todayStr });
+  const days    = last7Days();
   const rowRef  = useRef<HTMLDivElement>(null);
 
   // Scroll the date row so "today" (last item) is visible on open

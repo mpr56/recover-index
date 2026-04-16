@@ -2,7 +2,8 @@ import GlassSurface from '@/components/GlassSurface';
 import WeekChart from '@/components/WeekChart';
 import { sharedStyles as shared } from '@/components/ui';
 import { STATUS_CONFIG, type WeekDay } from '@/lib/types';
-import { fmtDate, todayStr } from '@/lib/dateUtils';
+import { fmtDate } from '@/lib/dateUtils';
+import { useTimezone } from '@/lib/timezoneContext';
 import { historySheetStyles as s } from './HistorySheet.styles';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function HistorySheet({ open, onClose, week }: Props) {
+  const { todayStr } = useTimezone();
   return (
     <>
       {open && <div onClick={onClose} style={shared.backdrop} />}

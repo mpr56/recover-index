@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import type { SleepEntry, SleepQuality } from '@/lib/types';
-import { todayStr } from '@/lib/dateUtils';
 
-interface Props { existing: SleepEntry | null; open: boolean; }
+interface Props {
+  existing:  SleepEntry | null;
+  open:      boolean;
+  todayStr:  () => string;
+}
 
 function computeHours(bedtime: string, wakeTime: string): number | null {
   if (!bedtime || !wakeTime) return null;
@@ -14,8 +17,8 @@ function computeHours(bedtime: string, wakeTime: string): number | null {
   return h > 0 && h <= 12 ? h : null;
 }
 
-export function useSleepForm({ existing, open }: Props) {
-  const [date,     setDate]     = useState(todayStr());
+export function useSleepForm({ existing, open, todayStr }: Props) {
+  const [date,     setDate]     = useState(() => todayStr());
   const [hours,    setHours]    = useState(7.5);
   const [quality,  setQuality]  = useState<SleepQuality>('okay');
   const [bedtime,  setBedtimeRaw]  = useState('');
@@ -28,16 +31,19 @@ export function useSleepForm({ existing, open }: Props) {
   // Reset whenever sheet opens or existing changes
   useEffect(() => {
     manualOverride.current = false;
+    // Always recompute today at open time — todayStr() uses the live timezone
     if (existing) {
+      setDate(todayStr());
       setHours(existing.hours);
       setQuality(existing.quality);
       setBedtimeRaw(existing.bedtime  ?? '');
       setWakeTimeRaw(existing.wakeTime ?? '');
     } else {
+      setDate(todayStr());
       setHours(7.5); setQuality('okay');
       setBedtimeRaw(''); setWakeTimeRaw('');
     }
-  }, [existing, open]);
+  }, [existing, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wrap setters so changing times always recomputes hours immediately
   const setBedtime = (v: string) => {

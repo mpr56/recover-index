@@ -5,7 +5,8 @@ import {
   getSubTypeOptions,
   type Activity,
 } from '@/lib/types';
-import { getLast7Days, fmtDay, fmtDateShort, todayStr } from '@/lib/dateUtils';
+import { fmtDay, fmtDateShort } from '@/lib/dateUtils';
+import { useTimezone } from '@/lib/timezoneContext';
 import { useActivityForm } from './useActivityForm';
 import { activitySheetStyles as s } from './ActivitySheet.styles';
 import { useRef, useEffect } from 'react';
@@ -19,8 +20,9 @@ interface Props {
 }
 
 export default function ActivitySheet({ open, onClose, onSave, editActivity, editDate }: Props) {
-  const form    = useActivityForm(editActivity ?? null);
-  const days    = getLast7Days();
+  const { todayStr, last7Days } = useTimezone();
+  const form    = useActivityForm(editActivity ?? null, todayStr);
+  const days    = last7Days();
   const rowRef  = useRef<HTMLDivElement>(null);
 
   // Scroll date row to today (last item) when opened

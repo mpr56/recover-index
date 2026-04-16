@@ -35,7 +35,7 @@ export default function Login() {
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, color: '#fff' }}>R</div>
+            <img src="/Rejuvenate.png" alt="Rejuvenate" style={{ height: 50, display: 'block', filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.1))' }} />
             <span style={{ fontWeight: 700, fontSize: 16, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em' }}>Rejuvenate</span>
           </div>
 

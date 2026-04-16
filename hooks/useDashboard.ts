@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { getDevSession } from '@/lib/devAuth';
 import { type DayRecord, type RecoveryResult, type WeekDay, type SleepEntry, type Activity } from '@/lib/types';
-import { todayStr } from '@/lib/dateUtils';
+import { localDateStr } from '@/lib/dateUtils';
 
 // ── Dev helper: bypass auth in local development ───────────────────────────
 function useSafeSession() {
@@ -18,6 +18,11 @@ function useSafeSession() {
 export function useDashboard() {
   const { data: session, status } = useSafeSession();
   const router = useRouter();
+
+  // ── Timezone / onboarding state ───────────────────────────────────────────
+  const [timezone,        setTimezone]        = useState<string>('UTC');
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [settingsLoaded,  setSettingsLoaded]  = useState(false);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [record,  setRecord]  = useState<DayRecord | null>(null);
@@ -40,9 +45,20 @@ export function useDashboard() {
     if (status === 'unauthenticated') router.push('/auth/login');
   }, [status, router]);
 
+  // ── Load settings (timezone) first ────────────────────────────────────────
+  const loadSettings = useCallback(async () => {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const { settings, needsOnboarding: needs } = await res.json();
+    if (settings?.timezone) setTimezone(settings.timezone);
+    setNeedsOnboarding(needs);
+    setSettingsLoaded(true);
+  }, []);
+
   // ── Data fetching ─────────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (tz: string) => {
     setLoading(true);
+    const today = localDateStr(tz);
     const [weekRes, logsRes] = await Promise.all([
       fetch('/api/week'),
       fetch('/api/logs'),
@@ -53,11 +69,11 @@ export function useDashboard() {
     const logs:     DayRecord[] = await logsRes.json();
     setWeek(weekData);
 
-    const today = logs.find(l => l.date === todayStr()) ?? null;
-    setRecord(today);
+    const todayRecord = logs.find(l => l.date === today) ?? null;
+    setRecord(todayRecord);
 
-    if (today && (today.sleep || today.activities.length > 0)) {
-      const sr = await fetch(`/api/score?date=${todayStr()}`);
+    if (todayRecord && (todayRecord.sleep || todayRecord.activities.length > 0)) {
+      const sr = await fetch(`/api/score?date=${today}`);
       setResult(sr.ok ? await sr.json() : null);
     } else {
       setResult(null);
@@ -65,9 +81,26 @@ export function useDashboard() {
     setLoading(false);
   }, [router]);
 
+  // Load settings when authenticated, then load data once settings are ready
   useEffect(() => {
-    if (status === 'authenticated') loadData();
-  }, [status, loadData]);
+    if (status === 'authenticated') loadSettings();
+  }, [status, loadSettings]);
+
+  useEffect(() => {
+    if (settingsLoaded && !needsOnboarding) loadData(timezone);
+  }, [settingsLoaded, needsOnboarding, timezone, loadData]);
+
+  // ── Timezone confirm (called from onboarding modal) ────────────────────────
+  const handleConfirmTimezone = async (tz: string) => {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timezone: tz }),
+    });
+    setTimezone(tz);
+    setNeedsOnboarding(false);
+    await loadData(tz);
+  };
 
   // ── Save / mutation handlers ──────────────────────────────────────────────
   const handleSaveSleep = async (entry: SleepEntry, date: string) => {
@@ -77,7 +110,7 @@ export function useDashboard() {
       body: JSON.stringify({ date, ...entry }),
     });
     setSleepOpen(false);
-    await loadData();
+    await loadData(timezone);
   };
 
   const handleSaveActivity = async (activity: Omit<Activity, 'id'>, date: string) => {
@@ -97,22 +130,22 @@ export function useDashboard() {
       });
     }
     setActOpen(false);
-    await loadData();
+    await loadData(timezone);
   };
 
   const handleRemoveActivity = async (activityId: string) => {
-    await fetch(`/api/activities/${activityId}?date=${todayStr()}`, { method: 'DELETE' });
-    await loadData();
+    const today = localDateStr(timezone);
+    await fetch(`/api/activities/${activityId}?date=${today}`, { method: 'DELETE' });
+    await loadData(timezone);
   };
 
   const handleEditActivity = (act: Activity) => {
     setEditActivity(act);
-    setEditDate(todayStr());
+    setEditDate(localDateStr(timezone));
     setActOpen(true);
   };
 
-  const openActivitySheet = () => setActOpen(true);
-
+  const openActivitySheet  = () => setActOpen(true);
   const closeActivitySheet = () => {
     setActOpen(false);
     setEditActivity(null);
@@ -125,22 +158,15 @@ export function useDashboard() {
   const hasAny   = hasSleep || hasActs;
 
   return {
-    // Session
     session, status,
-    // Data
+    timezone, needsOnboarding, handleConfirmTimezone,
     record, result, week, loading,
-    // Derived
     hasSleep, hasActs, hasAny,
-    // Sheet open state + setters
     sleepOpen, setSleepOpen,
-    actOpen,
-    openActivitySheet,
-    closeActivitySheet,
-    histOpen,  setHistOpen,
-    howOpen,   setHowOpen,
-    // Edit activity
+    actOpen, openActivitySheet, closeActivitySheet,
+    histOpen, setHistOpen,
+    howOpen,  setHowOpen,
     editActivity, editDate,
-    // Handlers
     handleSaveSleep,
     handleSaveActivity,
     handleRemoveActivity,

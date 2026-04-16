@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ActivityCategory, ActivitySubType, ActivityIntensity, Activity } from '@/lib/types';
 import { getSubTypeOptions } from '@/lib/types';
 import { activityWeightedLoad, activityBaseLoad, timeOfDayMultiplier } from '@/lib/algorithm';
-import { nowTimeStr, todayStr } from '@/lib/dateUtils';
+import { nowTimeStr } from '@/lib/dateUtils';
 
-export function useActivityForm(initial: Activity | null = null) {
-  const [date,         setDate]         = useState(todayStr());
+export function useActivityForm(initial: Activity | null = null, todayStr: () => string) {
+  const [date,         setDate]         = useState(() => todayStr());
   const [category,     setCategory]     = useState<ActivityCategory>(initial?.category ?? 'gym');
   const [subType,      setSubType]      = useState<ActivitySubType>(initial?.subType ?? 'push');
   const [intensity,    setIntensity]    = useState<ActivityIntensity>(initial?.intensity ?? 'moderate');
@@ -13,7 +13,12 @@ export function useActivityForm(initial: Activity | null = null) {
   const [timeOfDay,    setTimeOfDay]    = useState(initial?.timeOfDay ?? nowTimeStr());
   const [saving,       setSaving]       = useState(false);
 
-  // When category changes, auto-select the first sub-type in that category
+  // Keep date in sync with the live timezone whenever todayStr changes
+  // (e.g. after onboarding completes and timezone is set for the first time)
+  useEffect(() => {
+    setDate(todayStr());
+  }, [todayStr]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleCategoryChange = (cat: ActivityCategory) => {
     setCategory(cat);
     const options = getSubTypeOptions(cat);
@@ -29,7 +34,6 @@ export function useActivityForm(initial: Activity | null = null) {
     setTimeOfDay(nowTimeStr());
   };
 
-  // Live load preview
   const previewActivity: Activity = {
     id: 'preview', category, subType, intensity,
     durationMins, timeOfDay, label: subType,
@@ -40,12 +44,7 @@ export function useActivityForm(initial: Activity | null = null) {
   const timeMult     = Math.round(timeOfDayMultiplier(timeOfDay) * 100) / 100;
 
   const buildPayload = (): Omit<Activity, 'id'> => ({
-    category,
-    subType,
-    intensity,
-    durationMins,
-    timeOfDay,
-    label: subType,
+    category, subType, intensity, durationMins, timeOfDay, label: subType,
   });
 
   return {

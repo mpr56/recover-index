@@ -14,14 +14,17 @@ import BottomBar         from '@/components/BottomBar';
 import HowItWorksModal   from '@/components/HowItWorksModal';
 
 // ── Sheet overlays ─────────────────────────────────────────────────────────
-import SleepSheet    from '@/components/SleepSheet';
-import ActivitySheet from '@/components/ActivitySheet';
-import HistorySheet  from '@/components/HistorySheet';
+import SleepSheet          from '@/components/SleepSheet';
+import ActivitySheet       from '@/components/ActivitySheet';
+import HistorySheet        from '@/components/HistorySheet';
+import TimezoneOnboarding  from '@/components/TimezoneOnboarding';
 
 // ── Shared styles & hook ───────────────────────────────────────────────────
 import { shared, GLOBAL_CSS } from '@/components/shared.styles';
 import { useDashboard } from '@/hooks/useDashboard';
 import { STATUS_CONFIG } from '@/lib/types';
+import { TimezoneContext } from '@/lib/timezoneContext';
+import { localDateStr, getLast7DaysForTz } from '@/lib/dateUtils';
 
 const Silk = dynamic(() => import('@/components/Silk'), { ssr: false });
 
@@ -39,7 +42,14 @@ export default function Home() {
 
   const silkColor = db.result ? STATUS_CONFIG[db.result.status].silkColor : '#0f1a2e';
 
+  const tzContext = {
+    timezone:  db.timezone,
+    todayStr:  () => localDateStr(db.timezone),
+    last7Days: () => getLast7DaysForTz(db.timezone),
+  };
+
   return (
+    <TimezoneContext.Provider value={tzContext}>
     <>
       <Head>
         <title>Rejuvenate</title>
@@ -153,6 +163,12 @@ export default function Home() {
         open={db.howOpen}
         onClose={() => db.setHowOpen(false)}
       />
+
+      {/* ── Timezone onboarding — shown on first login ── */}
+      {db.needsOnboarding && (
+        <TimezoneOnboarding onConfirm={db.handleConfirmTimezone} />
+      )}
     </>
+    </TimezoneContext.Provider>
   );
 }

@@ -3,16 +3,16 @@ import { getServerSession } from 'next-auth';
 import { getDevSession } from '@/lib/devAuth';
 import { authOptions } from '../auth/[...nextauth]';
 import { removeActivity, updateActivity } from '@/lib/store';
-import { todayStr } from '@/lib/dateUtils';
+import { localDateStr } from '@/lib/dateUtils';
+import { getUserTimezone } from '@/lib/userSettings';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session =
-  getDevSession() ??
-  (await getServerSession(req, res, authOptions));
+  const session = getDevSession() ?? (await getServerSession(req, res, authOptions));
   if (!session) return res.status(401).json({ error: 'Unauthorized' });
 
+  const tz  = getUserTimezone(session.user.id);
   const { id, date } = req.query as { id: string; date?: string };
-  const targetDate = date ?? todayStr();
+  const targetDate = date ?? localDateStr(tz);
 
   if (req.method === 'DELETE') {
     const record = removeActivity(session.user.id, targetDate, id);
