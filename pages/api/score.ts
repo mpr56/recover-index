@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const record = getRecordByDate(session.user.id, date);
   if (!record) return res.status(404).json({ error: 'No record for this date' });
 
-  const pastDate = localDateOffset(tz, -6);
+  const pastDate = localDateOffset(tz, -42);
   const history  = getRecordsInRange(session.user.id, pastDate, date);
   return res.status(200).json(calculateRecovery(record, history));
 }

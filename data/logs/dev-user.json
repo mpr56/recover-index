@@ -11,5 +11,134 @@
     "notes": "",
     "createdAt": "2026-04-16T01:16:42.600Z",
     "updatedAt": "2026-04-16T01:16:42.600Z"
+  },
+  {
+    "id": "e31ef0d0-c3af-4044-a7e5-b263c3228f9d",
+    "userId": "dev-user",
+    "date": "2026-04-20",
+    "sleep": {
+      "hours": 7.5,
+      "quality": "okay",
+      "bedtime": "23:30",
+      "wakeTime": "07:05"
+    },
+    "activities": [
+      {
+        "category": "sports",
+        "subType": "football",
+        "intensity": "moderate",
+        "durationMins": 115,
+        "timeOfDay": "14:22",
+        "label": "football",
+        "id": "654a487d-97e5-4511-aaf0-5872b49e7ed6"
+      }
+    ],
+    "notes": "",
+    "createdAt": "2026-04-21T03:28:44.454Z",
+    "updatedAt": "2026-04-21T04:23:12.138Z"
+  },
+  {
+    "id": "0a68c4e0-fd9e-4a03-a065-7ef7def2ddd1",
+    "userId": "dev-user",
+    "date": "2026-04-19",
+    "sleep": {
+      "hours": 3.5,
+      "quality": "okay",
+      "bedtime": "04:30",
+      "wakeTime": "08:05"
+    },
+    "activities": [
+      {
+        "category": "sports",
+        "subType": "basketball",
+        "intensity": "moderate",
+        "durationMins": 100,
+        "timeOfDay": "13:29",
+        "label": "basketball",
+        "id": "f5b5d73f-01a8-4ecd-a093-7c38041be9c9"
+      },
+      {
+        "category": "sports",
+        "subType": "basketball",
+        "intensity": "moderate",
+        "durationMins": 130,
+        "timeOfDay": "13:05",
+        "label": "basketball",
+        "id": "136e4a59-bb09-4603-99a0-d1d24aa9f391"
+      }
+    ],
+    "notes": "",
+    "createdAt": "2026-04-21T03:29:38.356Z",
+    "updatedAt": "2026-04-21T03:46:57.908Z"
+  },
+  {
+    "id": "4ca98657-6319-4973-935d-ff2881487f69",
+    "userId": "dev-user",
+    "date": "2026-04-21",
+    "sleep": {
+      "hours": 7.5,
+      "quality": "okay",
+      "bedtime": "23:35",
+      "wakeTime": "07:05"
+    },
+    "activities": [
+      {
+        "category": "gym",
+        "subType": "full_body",
+        "intensity": "moderate",
+        "durationMins": 85,
+        "timeOfDay": "12:20",
+        "label": "full_body",
+        "id": "1355d84b-1c1b-4b88-be40-e5382ffca8d8"
+      }
+    ],
+    "notes": "",
+    "createdAt": "2026-04-21T04:20:11.958Z",
+    "updatedAt": "2026-04-21T04:22:47.561Z"
+  },
+  {
+    "id": "d6a577e9-000e-4a87-8d1a-5d53dfc70409",
+    "userId": "dev-user",
+    "date": "2026-04-18",
+    "sleep": {
+      "hours": 7.5,
+      "quality": "okay",
+      "bedtime": "23:35",
+      "wakeTime": "07:05"
+    },
+    "activities": [],
+    "notes": "",
+    "createdAt": "2026-04-21T04:20:35.892Z",
+    "updatedAt": "2026-04-21T04:20:43.807Z"
+  },
+  {
+    "id": "1b05ce18-f9fd-4a6a-b0bb-fba81d5c28e6",
+    "userId": "dev-user",
+    "date": "2026-04-17",
+    "sleep": {
+      "hours": 3.5,
+      "quality": "poor",
+      "bedtime": "04:35",
+      "wakeTime": "08:05"
+    },
+    "activities": [],
+    "notes": "",
+    "createdAt": "2026-04-21T04:21:05.595Z",
+    "updatedAt": "2026-04-21T04:21:05.595Z"
+  },
+  {
+    "id": "b5bfd576-fa38-4d9a-a9be-bf41d96aa126",
+    "userId": "dev-user",
+    "date": "2026-04-16",
+    "sleep": {
+      "hours": 7.5,
+      "quality": "okay",
+      "bedtime": "23:35",
+      "wakeTime": "07:05"
+    },
+    "activities": [],
+    "notes": "",
+    "createdAt": "2026-04-21T04:23:37.792Z",
+    "updatedAt": "2026-04-21T04:23:37.792Z"
   }
 ]

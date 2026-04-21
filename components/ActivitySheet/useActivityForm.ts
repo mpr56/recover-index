@@ -11,6 +11,9 @@ export function useActivityForm(initial: Activity | null = null, todayStr: () =>
   const [intensity,    setIntensity]    = useState<ActivityIntensity>(initial?.intensity ?? 'moderate');
   const [durationMins, setDurationMins] = useState(initial?.durationMins ?? 60);
   const [timeOfDay,    setTimeOfDay]    = useState(initial?.timeOfDay ?? nowTimeStr());
+  // RPE (1–10) is optional. undefined means "use the 3-bucket intensity".
+  const [rpe,          setRpe]          = useState<number | undefined>(initial?.rpe);
+  const [rpeEnabled,   setRpeEnabled]   = useState<boolean>(typeof initial?.rpe === 'number');
   const [saving,       setSaving]       = useState(false);
 
   // Keep date in sync with the live timezone whenever todayStr changes
@@ -32,11 +35,15 @@ export function useActivityForm(initial: Activity | null = null, todayStr: () =>
     setIntensity('moderate');
     setDurationMins(60);
     setTimeOfDay(nowTimeStr());
+    setRpe(undefined);
+    setRpeEnabled(false);
   };
+
+  const effectiveRpe = rpeEnabled ? (rpe ?? 5) : undefined;
 
   const previewActivity: Activity = {
     id: 'preview', category, subType, intensity,
-    durationMins, timeOfDay, label: subType,
+    durationMins, timeOfDay, label: subType, rpe: effectiveRpe,
   };
 
   const baseLoad     = Math.round(activityBaseLoad(previewActivity));
@@ -45,6 +52,7 @@ export function useActivityForm(initial: Activity | null = null, todayStr: () =>
 
   const buildPayload = (): Omit<Activity, 'id'> => ({
     category, subType, intensity, durationMins, timeOfDay, label: subType,
+    ...(typeof effectiveRpe === 'number' ? { rpe: effectiveRpe } : {}),
   });
 
   return {
@@ -54,6 +62,8 @@ export function useActivityForm(initial: Activity | null = null, todayStr: () =>
     intensity, setIntensity,
     durationMins, setDurationMins,
     timeOfDay, setTimeOfDay,
+    rpe, setRpe,
+    rpeEnabled, setRpeEnabled,
     saving, setSaving,
     reset,
     buildPayload,

@@ -11,6 +11,23 @@ import { useActivityForm } from './useActivityForm';
 import { activitySheetStyles as s } from './ActivitySheet.styles';
 import { useRef, useEffect } from 'react';
 
+/**
+ * Short guidance text for each RPE value (Foster's modified Borg CR-10 scale).
+ * Helps users calibrate their self-report consistently.
+ */
+function rpeHint(rpe: number): string {
+  if (rpe <= 1) return 'Barely any effort — sitting, stretching.';
+  if (rpe <= 2) return 'Very light — easy walking pace, full conversation.';
+  if (rpe <= 3) return 'Light — brisk walk, you can still talk in full sentences.';
+  if (rpe <= 4) return 'Moderate — noticeable breathing, short sentences only.';
+  if (rpe <= 5) return 'Somewhat hard — working, but could keep going a while.';
+  if (rpe <= 6) return 'Hard — breathing heavily, talking is tough.';
+  if (rpe <= 7) return 'Very hard — sustainable for ~20 min at most.';
+  if (rpe <= 8) return 'Very, very hard — near your limit, can only hold briefly.';
+  if (rpe <= 9) return 'Max effort — gasping, can barely speak.';
+  return 'Absolute max — can only sustain for seconds.';
+}
+
 interface Props {
   open:        boolean;
   onClose:     () => void;
@@ -40,6 +57,13 @@ export default function ActivitySheet({ open, onClose, onSave, editActivity, edi
       form.setIntensity(editActivity.intensity);
       form.setDurationMins(editActivity.durationMins);
       form.setTimeOfDay(editActivity.timeOfDay);
+      if (typeof editActivity.rpe === 'number') {
+        form.setRpe(editActivity.rpe);
+        form.setRpeEnabled(true);
+      } else {
+        form.setRpe(undefined);
+        form.setRpeEnabled(false);
+      }
       if (editDate) form.setDate(editDate);
     } else if (!open) {
       form.reset();
@@ -135,14 +159,66 @@ export default function ActivitySheet({ open, onClose, onSave, editActivity, edi
 
             {/* ── Intensity ── */}
             <Section label="Intensity">
-              <div style={s.intensityRow}>
+              <div style={{ ...s.intensityRow, opacity: form.rpeEnabled ? 0.35 : 1, transition: 'opacity 0.15s' }}>
                 {INTENSITIES.map(it => (
-                  <button key={it.value} onClick={() => form.setIntensity(it.value)} style={s.intensityBtn(form.intensity === it.value)}>
+                  <button
+                    key={it.value}
+                    onClick={() => form.setIntensity(it.value)}
+                    disabled={form.rpeEnabled}
+                    style={{
+                      ...s.intensityBtn(form.intensity === it.value),
+                      cursor: form.rpeEnabled ? 'not-allowed' : 'pointer',
+                    }}
+                  >
                     <span>{it.label}</span>
                     <span style={s.intensitySub}>{it.sub}</span>
                   </button>
                 ))}
               </div>
+            </Section>
+
+            {/* ── Session RPE (optional, overrides Intensity when on) ── */}
+            <Section label="How Hard Did It Feel?">
+              <button
+                onClick={() => form.setRpeEnabled(!form.rpeEnabled)}
+                style={{
+                  width: '100%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '11px 14px', borderRadius: 10,
+                  background: form.rpeEnabled ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${form.rpeEnabled ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  color: form.rpeEnabled ? '#fff' : 'rgba(255,255,255,0.55)',
+                  cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
+                  transition: 'all 0.15s',
+                  marginBottom: form.rpeEnabled ? 12 : 0,
+                }}
+              >
+                <span>
+                  {form.rpeEnabled ? '✓ Using RPE (1–10)' : 'Use precise RPE instead'}
+                </span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+                  {form.rpeEnabled ? 'tap to disable' : 'optional, more accurate'}
+                </span>
+              </button>
+
+              {form.rpeEnabled && (
+                <>
+                  <SliderField
+                    label="Perceived Exertion"
+                    value={form.rpe ?? 5}
+                    display={`${form.rpe ?? 5} / 10`}
+                    min={1} max={10} step={1}
+                    minLabel="Very easy" maxLabel="Max effort"
+                    onChange={v => form.setRpe(v)}
+                  />
+                  <p style={{
+                    fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: -8,
+                    lineHeight: 1.5,
+                  }}>
+                    {rpeHint(form.rpe ?? 5)}
+                  </p>
+                </>
+              )}
             </Section>
 
             {/* ── Duration ── */}

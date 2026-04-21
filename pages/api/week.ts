@@ -4,7 +4,7 @@ import { getDevSession } from '@/lib/devAuth';
 import { authOptions } from './auth/[...nextauth]';
 import { getRecordsInRange, getRecordByDate } from '@/lib/store';
 import { calculateRecovery } from '@/lib/algorithm';
-import { getLast7DaysForTz } from '@/lib/dateUtils';
+import { getLast7DaysForTz, localDateOffset } from '@/lib/dateUtils';
 import { getUserTimezone } from '@/lib/userSettings';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,7 +13,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const tz   = getUserTimezone(session.user.id);
   const days = getLast7DaysForTz(tz);
-  const allRecs = getRecordsInRange(session.user.id, days[0], days[days.length - 1]);
+
+  // Pull 42 days before the earliest displayed day so each score has enough
+  // history to seed its Banister CTL (τ = 42d) correctly.
+  const historyStart = localDateOffset(tz, -(6 + 42));
+  const allRecs = getRecordsInRange(session.user.id, historyStart, days[days.length - 1]);
 
   const week = days.map(date => {
     const rec = getRecordByDate(session.user.id, date);

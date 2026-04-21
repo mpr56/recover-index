@@ -32,7 +32,15 @@ export interface Activity {
   durationMins: number;
   timeOfDay:    string; // "HH:MM" 24-hour
   label:        string;
+  /**
+   * Optional session-RPE (Foster method): how hard the session felt, 1–10.
+   * When provided, overrides the 3-bucket intensity estimate — RPE × duration
+   * is a well-validated proxy for TRIMP (Banister) when HR isn't available.
+   */
+  rpe?:         number;
 }
+
+export type WorkloadStatus = 'detraining' | 'optimal' | 'elevated' | 'danger';
 
 // ─── Sleep ────────────────────────────────────────────────────────────────────
 export interface SleepEntry {
@@ -71,6 +79,18 @@ export interface RecoveryResult {
   status:             RecoveryStatus;
   recommendation:     string;
   trainingAdvice:     string;
+
+  /** Rolling 7-day exponentially-weighted training load (Banister ATL). */
+  acuteLoad:          number;
+  /** Rolling 42-day exponentially-weighted training load (Banister CTL — "fitness"). */
+  chronicLoad:        number;
+  /** Acute / chronic ratio. 0.8–1.3 is the Gabbett "sweet spot"; >1.5 is risky. */
+  workloadRatio:      number;
+  workloadStatus:     WorkloadStatus;
+  /** Hours of sleep owed over the last 7 days, vs the load-adjusted nightly target. */
+  sleepDebt7d:        number;
+  /** The load-adjusted nightly target hours used to compute sleep debt (scales with CTL). */
+  sleepTargetHours:   number;
 }
 
 export interface WeekDay {
