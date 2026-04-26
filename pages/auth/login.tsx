@@ -7,8 +7,11 @@ import GlassSurface from '@/components/GlassSurface';
 const Silk = dynamic(() => import('@/components/Silk'), { ssr: false });
 
 export default function Login() {
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState('');
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [email,     setEmail]     = useState('');
+  const [password,  setPassword]  = useState('');
 
   const handleGoogle = async () => {
     setError('');
@@ -18,6 +21,20 @@ export default function Login() {
     } catch {
       setError('Sign-in failed. Please try again.');
       setLoading(false);
+    }
+  };
+
+  const handleDebug = async () => {
+    setError('');
+    setLoading(true);
+    const res = await signIn('debug-credentials', {
+      email, password, redirect: false,
+    });
+    if (res?.error) {
+      setError('Invalid credentials.');
+      setLoading(false);
+    } else {
+      window.location.href = '/';
     }
   };
 
@@ -52,39 +69,95 @@ export default function Login() {
             </p>
           )}
 
+          {/* Google button */}
+          {!debugOpen && (
+            <button
+              onClick={handleGoogle}
+              disabled={loading}
+              style={{
+                width: '100%', padding: '14px 20px', borderRadius: 12,
+                background: loading ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.92)',
+                color: loading ? 'rgba(255,255,255,0.3)' : '#0f1a2e',
+                border: 'none', fontSize: 14, fontWeight: 700,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', letterSpacing: '-0.01em',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                transition: 'all 0.15s',
+              }}
+            >
+              {loading ? (
+                <span style={{ width: 18, height: 18, border: '2px solid rgba(15,26,46,0.2)', borderTopColor: '#0f1a2e', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+              ) : (
+                <><GoogleIcon />Continue with Google</>
+              )}
+            </button>
+          )}
+
+          {/* Debug credentials form */}
+          {debugOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                type="email" placeholder="Email" value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleDebug()}
+                style={inputStyle}
+              />
+              <input
+                type="password" placeholder="Password" value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleDebug()}
+                style={inputStyle}
+              />
+              <button
+                onClick={handleDebug}
+                disabled={loading || !email || !password}
+                style={{
+                  width: '100%', padding: '13px', borderRadius: 12,
+                  background: loading || !email || !password ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.8)',
+                  color: loading || !email || !password ? 'rgba(255,255,255,0.3)' : '#fff',
+                  border: 'none', fontSize: 14, fontWeight: 700,
+                  cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit', transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                {loading
+                  ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                  : 'Sign in'}
+              </button>
+            </div>
+          )}
+
+          {/* Understated toggle */}
           <button
-            onClick={handleGoogle}
-            disabled={loading}
+            onClick={() => { setDebugOpen(o => !o); setError(''); }}
             style={{
-              width: '100%', padding: '14px 20px', borderRadius: 12,
-              background: loading ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.92)',
-              color: loading ? 'rgba(255,255,255,0.3)' : '#0f1a2e',
-              border: 'none', fontSize: 14, fontWeight: 700,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', letterSpacing: '-0.01em',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              transition: 'all 0.15s',
+              display: 'block', margin: '20px auto 0', background: 'none',
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 11, color: 'rgba(255,255,255,0.15)',
+              textDecoration: 'underline', textUnderlineOffset: 3,
             }}
           >
-            {loading ? (
-              <span style={{ width: 18, height: 18, border: '2px solid rgba(15,26,46,0.2)', borderTopColor: '#0f1a2e', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-            ) : (
-              <>
-                <GoogleIcon />
-                Continue with Google
-              </>
-            )}
+            {debugOpen ? '← back to Google sign in' : 'sign in with email'}
           </button>
 
-          <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 24, lineHeight: 1.6 }}>
-            By continuing, you agree to our terms of service.<br />
-            Your data is stored securely and never shared.
-          </p>
+          {!debugOpen && (
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 20, lineHeight: 1.6 }}>
+              By continuing, you agree to our terms of service.<br />
+              Your data is stored securely and never shared.
+            </p>
+          )}
         </GlassSurface>
       </div>
     </>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '12px 14px', borderRadius: 12,
+  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+  color: '#fff', fontSize: 14, outline: 'none', fontFamily: 'inherit',
+};
 
 function GoogleIcon() {
   return (
